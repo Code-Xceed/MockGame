@@ -1,0 +1,182 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  STUDENT
+  MODERATOR
+  ADMIN
+}
+
+enum ExamTrack {
+  JEE_MAIN
+  JEE_ADVANCED
+  BITSAT
+}
+
+enum MatchStatus {
+  FOUND
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum Subject {
+  PHYSICS
+  CHEMISTRY
+  MATHEMATICS
+}
+
+enum AntiCheatSeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  displayName  String
+  role         UserRole @default(STUDENT)
+  examTrack    ExamTrack @default(JEE_MAIN)
+  timezone     String?
+  region       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  ratings       Rating[]
+  matchesAsA    Match[]        @relation("MatchPlayerA")
+  matchesAsB    Match[]        @relation("MatchPlayerB")
+  refreshTokens RefreshToken[]
+  antiCheatFlags AntiCheatFlag[]
+}
+
+model Rating {
+  id           String    @id @default(cuid())
+  userId       String
+  examTrack    ExamTrack
+  hiddenMmr    Int       @default(1200)
+  visibleTier  String    @default("Bronze")
+  matchesPlayed Int      @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, examTrack])
+  @@index([examTrack, hiddenMmr])
+}
+
+model Match {
+  id               String      @id @default(cuid())
+  examTrack        ExamTrack
+  status           MatchStatus @default(FOUND)
+  preferredSubject Subject?
+  preferredDifficulty Difficulty?
+  roundTimeSeconds Int @default(45)
+  playerAId        String
+  playerBId        String
+  playerAMmrBefore Int
+  playerBMmrBefore Int
+  winnerId         String?
+  playerAScore     Int?
+  playerBScore     Int?
+  createdAt        DateTime    @default(now())
+  startedAt        DateTime?
+  endedAt          DateTime?
+
+  playerA User    @relation("MatchPlayerA", fields: [playerAId], references: [id], onDelete: Restrict)
+  playerB User    @relation("MatchPlayerB", fields: [playerBId], references: [id], onDelete: Restrict)
+  rounds  Round[]
+  antiCheatFlags AntiCheatFlag[]
+
+  @@index([examTrack, status, createdAt])
+  @@index([playerAId, createdAt])
+  @@index([playerBId, createdAt])
+}
+
+model Question {
+  id         String     @id @default(cuid())
+  examTrack  ExamTrack
+  subject    Subject
+  difficulty Difficulty
+  body       String
+  optionA    String
+  optionB    String
+  optionC    String
+  optionD    String
+  correctOption String  // "A" | "B" | "C" | "D"
+  explanation  String?
+  isActive   Boolean    @default(true)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  rounds Round[]
+
+  @@index([examTrack, subject, difficulty])
+  @@index([isActive, examTrack])
+}
+
+model Round {
+  id          String   @id @default(cuid())
+  matchId     String
+  questionId  String
+  roundNumber Int      // 1, 2, 3
+  playerAAnswer String?
+  playerBAnswer String?
+  playerACorrect Boolean?
+  playerBCorrect Boolean?
+  playerATimeMs  Int?    // milliseconds to answer
+  playerBTimeMs  Int?
+  createdAt   DateTime @default(now())
+
+  match    Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Restrict)
+
+  @@unique([matchId, roundNumber])
+  @@index([matchId])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+model AntiCheatFlag {
+  id        String            @id @default(cuid())
+  matchId   String
+  userId    String?
+  type      String
+  severity  AntiCheatSeverity
+  details   Json?
+  createdAt DateTime          @default(now())
+  resolvedAt DateTime?
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user  User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([matchId, createdAt])
+  @@index([userId, createdAt])
+  @@index([severity, createdAt])
+}

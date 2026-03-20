@@ -1,0 +1,36 @@
+{
+  "name": "mockgame",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Competitive exam prep battle platform monorepo.",
+  "packageManager": "pnpm@10.7.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "corepack pnpm -r --parallel --filter @mockgame/web --filter @mockgame/admin --filter @mockgame/api dev",
+    "build": "corepack pnpm -r build",
+    "lint": "corepack pnpm -r lint",
+    "typecheck": "corepack pnpm -r typecheck",
+    "test": "corepack pnpm -r test",
+    "db:generate": "corepack pnpm --filter @mockgame/api db:generate",
+    "format": "prettier --check .",
+    "format:write": "prettier --write .",
+    "turbo:build": "turbo run build",
+    "turbo:lint": "turbo run lint",
+    "turbo:typecheck": "turbo run typecheck",
+    "turbo:test": "turbo run test"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "@typescript-eslint/eslint-plugin": "^8.28.0",
+    "@typescript-eslint/parser": "^8.28.0",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^15.2.4",
+    "prettier": "^3.5.3",
+    "turbo": "^2.5.0",
+    "typescript": "^5.8.2"
+  }
+}
